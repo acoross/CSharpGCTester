@@ -1,29 +1,8 @@
 ﻿using System.IO;
-            
+using System.Threading.Tasks;
+
 namespace GCTester
 {
-    class Vector
-    {
-        public double X;
-        public double Y;
-
-        public Vector(){}
-
-        public Vector(double x, double y)
-        {
-            this.X = x;
-            this.Y = y;
-        }
-
-        public static double SqDist(Vector v1, Vector v2)
-        {
-            var diffX = (v1.X - v2.X);
-            var diffY = (v1.Y - v2.Y);
-
-            return diffX * diffX + diffY * diffY;
-        }
-    }
-
     abstract class Character
     {
         public readonly int name;
@@ -40,7 +19,7 @@ namespace GCTester
             this.name = name;
         }
 
-        public void Start()
+        public async void Start()
         {
             if (this is PC)
             {
@@ -51,37 +30,62 @@ namespace GCTester
                 NPC.workingNpcCount++;
             }
 
-            int delay = game.rand.Next(100, 1200);
-            OnTick(delay);
+            OnTick();
+
+            //int delay = game.rand.Next(100, 1200);
+
+            //await Task.Delay(delay);
+
+            //try
+            //{
+            //    while (run)
+            //    {
+            //        int cmd = game.rand.Next(2);
+            //        if (cmd == 0)
+            //        {
+            //            Move();
+            //        }
+            //        else
+            //        {
+            //            AttackNerest();
+            //        }
+
+            //        if (run)
+            //        {
+            //            await Task.Delay(game.rand.Next(400, 600));
+            //        }
+            //    }
+            //}
+            //finally
+            //{
+            //    if (this is PC)
+            //    {
+            //        PC.workingPcCount--;
+            //    }
+            //    else if (this is NPC)
+            //    {
+            //        NPC.workingNpcCount--;
+            //    }
+            //}
         }
 
-        public void Stop()
-        {
-            run = false;
-        }
-
-        // can move 4 times per second, 
-        // but only 50% of characters are actively moving
-        // so, average action rate is 2 times per second.
-        // -> 
-        void OnTick(int delay)
+        void OnTick()
         {
             game.Post(() =>
             {
-                int cmd = game.rand.Next(2);
-                if (cmd == 0)
+                if(run)
                 {
-                    Move();
-                }
-                else
-                {
-                    AttackNerest();
-                }
+                    int cmd = game.rand.Next(2);
+                    if (cmd == 0)
+                    {
+                        Move();
+                    }
+                    else
+                    {
+                        AttackNerest();
+                    }
 
-                if (run)
-                {
-                    int delay2 = game.rand.Next(400, 600);
-                    OnTick(delay2);
+                    OnTick();
                 }
                 else
                 {
@@ -94,7 +98,12 @@ namespace GCTester
                         NPC.workingNpcCount--;
                     }
                 }
-            }, delay);
+            }, game.rand.Next(400, 600));
+        }
+
+        public void Stop()
+        {
+            run = false;
         }
 
         void Move()
@@ -119,7 +128,8 @@ namespace GCTester
                 bw.Write(x);
                 bw.Write(y);
 
-                game.BroadcastToUsers(ms.ToArray());
+                var buffer = new NetBuffer(ms.ToArray());
+                game.BroadcastToUsers(buffer);
             }
         }
 
@@ -161,7 +171,8 @@ namespace GCTester
                 bw.Write("damage");
                 bw.Write(1);
 
-                game.BroadcastToUsers(ms.ToArray());
+                var buffer = new NetBuffer(ms.ToArray());
+                game.BroadcastToUsers(buffer);
             }
         }
 

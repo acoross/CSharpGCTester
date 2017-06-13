@@ -2,63 +2,9 @@
 using System.IO;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using System.Threading.Tasks.Dataflow;
 
 namespace GCTester
 {
-    class PC : Character
-    {
-        public static int workingPcCount = 0;
-
-        byte[] sendQueue = new byte[1024];
-
-        public PC(Game game, int name)
-            : base(game, name)
-        {
-        }
-
-        public void Send(byte[] data)
-        {
-            Buffer.BlockCopy(data, 0, sendQueue, 0, data.Length);
-        }
-
-        protected override Character FindNearestEnemy()
-        {
-            return game.FindNearestNPC(pos);
-        }
-
-        protected override void OnDie()
-        {
-            pos = game.RandomPos();
-            hp = 10;
-        }
-    }
-
-    class NPC : Character
-    {
-        public static int workingNpcCount = 0;
-
-        public NPC(Game game, int name)
-            : base(game, name)
-        {
-        }
-
-        protected override Character FindNearestEnemy()
-        {
-            return game.FindNearestPC(pos);
-        }
-
-        protected override void OnDie()
-        {
-            game.RemoveNPC(this);
-
-            game.Post(() =>
-            {
-                game.AddNewNpc(this.name);
-            });
-        }
-    }
-
     class Game
     {
         readonly int USER_COUNT;
@@ -67,42 +13,45 @@ namespace GCTester
         public Random rand { get; } = new Random(DateTime.Now.Millisecond);
         ConcurrentDictionary<int, PC> pcs = new ConcurrentDictionary<int, PC>();
         ConcurrentDictionary<int, NPC> npcs = new ConcurrentDictionary<int, NPC>();
-        BufferBlock<Action> jobQueue = new BufferBlock<Action>();
+
+        public JobSerializer serializer { get; private set; }
 
         public readonly int number;
 
-        public Game(int num, int userCount)
+        public Game(JobSerializer serializer, int num, int userCount)
         {
+            this.serializer = serializer;
             this.USER_COUNT = userCount;
             this.number = num;
         }
 
-        public async Task Run()
+        public void Init()
         {
             Initialize();
-
-            // run
-            for (;;)
-            {
-                var job = await jobQueue.ReceiveAsync();
-                job();
-            }
         }
 
         void Initialize()
         {
-            for (int i = 0; i < USER_COUNT; ++i)
+            Post(() =>
             {
-                var pc = new PC(this, i);
-                pc.pos = RandomPos();
-                pcs.TryAdd(i, pc);
-                pc.Start();
-            }
+                for (int i = 0; i < USER_COUNT; ++i)
+                {
+                    AddNewPc(i);
+                }
 
-            for (int i = 0; i < NPC_COUNT; ++i)
-            {
-                AddNewNpc(i);
-            }
+                for (int i = 0; i < NPC_COUNT; ++i)
+                {
+                    AddNewNpc(i);
+                }
+            });
+        }
+
+        public void AddNewPc(int name)
+        {
+            var pc = new PC(this, name);
+            pc.pos = RandomPos();
+            pcs.TryAdd(name, pc);
+            pc.Start();
         }
 
         public void AddNewNpc(int name)
@@ -115,24 +64,14 @@ namespace GCTester
 
         public void Post(Action job, int delay = 0)
         {
-            if (delay > 0)
-            {
-                Task.Delay(delay).ContinueWith((t) =>
-                {
-                    jobQueue.SendAsync(job);
-                });
-            }
-            else
-            {
-                jobQueue.SendAsync(job);
-            }
+            serializer.Post(job, delay);
         }
 
-        public void BroadcastToUsers(byte[] data)
+        public void BroadcastToUsers(NetBuffer buffer)
         {
             foreach (var pc in pcs.Values)
             {
-                pc.Send(data);
+                pc.Send(buffer);
             }
         }
 

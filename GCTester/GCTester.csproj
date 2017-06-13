@@ -36,8 +36,12 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Game.cs" />
-    <Compile Include="PC.cs" />
     <Compile Include="Character.cs" />
+    <Compile Include="PcNpc.cs" />
+    <Compile Include="Vector.cs" />
+    <Compile Include="JobSerializer.cs" />
+    <Compile Include="PerfMon.cs" />
+    <Compile Include="NetBuffer.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
 </Project>
