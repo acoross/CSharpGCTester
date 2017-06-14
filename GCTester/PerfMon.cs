@@ -49,13 +49,13 @@ namespace GCTester
                 else
                 {
                     avr *= 0.995;
-                    avr += diff.TotalMilliseconds * 0.005;
+                    avr += (diff.TotalMilliseconds - 10) * 0.005;
                 }
 
                 count++;
                 last = current;
                 loop();
-            }, 1);
+            }, 10);
         }
     }
 }

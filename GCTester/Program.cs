@@ -16,7 +16,7 @@ namespace GCTester
 
                 int SERIALIZER_COUNT = 4;
                 int GAME_COUNT_PER_SERIALIZER = 1;
-                int USER_COUNT_PER_GAME = 100;
+                int USER_COUNT_PER_GAME = 150;
 
                 List<JobSerializer> serializers = new List<JobSerializer>();
 
@@ -75,13 +75,20 @@ namespace GCTester
                 for (;;)
                 {
                     var key = Console.ReadKey();
-                    if (key.KeyChar == 'q')
+                    var keyChar = key.KeyChar;
+                    if (keyChar == 'q')
                     {
                         foreach (var s in serializers)
                         {
                             s.Stop();
                         }
                         break;
+                    }
+                    else if (keyChar == 'g')
+                    {
+                        Console.WriteLine("garbage collect start");
+                        GC.Collect();
+                        Console.WriteLine("garbage collect start");
                     }
                 }
 
